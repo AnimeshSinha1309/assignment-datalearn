@@ -11,26 +11,25 @@ import datagen
 
 SECRET_KEY = 'EdQPhzkQ1CnpQ9jxCY4AH8eATTHeZm4IwEs2P1jE2xT3p8sCeE'
 
-LOG_FILE = 'results_5.txt'  # File that keep populations and fitness
-ITERATIONS = 10
+LOG_FILE = 'results_6.txt'  # File that keep populations and fitness
+ITERATIONS = 240
 POPULATION_SIZE = 10
 REAL_DATA = True
 
 OVERFIT_WEIGHTS = np.array([
-    0.0, # 0.0,
-    0.0, # 0.1240317450077846,
-    0.0, # -6.211941063144333,
-    0.0, # 0.04933903144709126,
-    0.0, # 0.03810848157715883,
-    0.0, # 8.132366097133624e-05,
-    0.0, # -6.018769160916912e-05,
-    0.0, # -1.251585565299179e-07,
-    0.0, # 3.484096383229681e-08,
-    0.0, # 4.1614924993407104e-11,
-    0.0 # -6.732420176902565e-12
+    0.0,
+    0.1240317450077846,
+    -6.211941063144333,
+    0.04933903144709126,
+    0.03810848157715883,
+    8.132366097133624e-05,
+    -6.018769160916912e-05,
+    -1.251585565299179e-07,
+    3.484096383229681e-08,
+    4.1614924993407104e-11,
+    -6.732420176902565e-12
 ])
-
-
+ 
 class Individual:
     """
     A single individual of the Genetic Ensemble
@@ -42,20 +41,20 @@ class Individual:
         """
         self.fitness = None
         self.train_error, self.validate_error = None, None
-        self.genes = np.multiply(
-            np.random.normal(loc=1.0, scale=0.001, size=(number_of_genes)),
-            default)
+        self.genes = np.random.normal(loc=0.0, scale=0.0005, size=(number_of_genes)) + default
 
-    def birth(self, parent=None):
+    def birth(self, parent=None, mutation_count:int = 3):
         """
         Create the new genome for a child of the parents.
         :param parents1: the first parent in the couple mating
         :param parents2: the second parent in the couple mating
+        :param mutation_count: number of mutated genes
         """
         if parent is not None:
             self.genes = parent.genes.copy()
-        idx = np.random.randint(len(self.genes))
-        self.genes[idx] *= np.random.normal(loc=1.0, scale=0.03)
+        for i in range(mutation_count):
+            idx = np.random.randint(len(self.genes))
+            self.genes[idx] += np.random.normal(loc=0.0, scale=0.00001)
         self.genes = np.clip(self.genes, -10, 10)
         self.update_fitness()
         return self

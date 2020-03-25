@@ -13,7 +13,7 @@ def get_errors(id, vector):
     returns python array of length 2 
     (train error and validation error)
     """
-    for i in vector: assert -10<=abs(i)<=10
+    for i in vector: assert -10 <= abs(i) <= 10
     assert len(vector) == MAX_DEG
 
     return json.loads(send_request(id, vector, 'geterrors'))
@@ -23,7 +23,7 @@ def submit(id, vector):
     used to make official submission of your weight vector
     returns string "successfully submitted" if properly submitted.
     """
-    for i in vector: assert -10<=abs(i)<=10
+    for i in vector: assert -10 <= abs(i) <= 10
     assert len(vector) == MAX_DEG
     return send_request(id, vector, 'submit')
 
