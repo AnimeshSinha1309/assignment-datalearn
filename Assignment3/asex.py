@@ -12,36 +12,31 @@ import datagen
 SECRET_KEY = 'EdQPhzkQ1CnpQ9jxCY4AH8eATTHeZm4IwEs2P1jE2xT3p8sCeE'
 
 LOG_FILE = 'results_6.txt'  # File that keep populations and fitness
-ITERATIONS = 240
-POPULATION_SIZE = 10
+ITERATIONS = 100
+POPULATION_SIZE = 40
 REAL_DATA = True
-
-OVERFIT_WEIGHTS = np.array([
-    0.0,
-    0.1240317450077846,
-    -6.211941063144333,
-    0.04933903144709126,
-    0.03810848157715883,
-    8.132366097133624e-05,
-    -6.018769160916912e-05,
-    -1.251585565299179e-07,
-    3.484096383229681e-08,
-    4.1614924993407104e-11,
-    -6.732420176902565e-12
-])
  
+ELITE_GENES = []
+
+
 class Individual:
     """
     A single individual of the Genetic Ensemble
     """
 
-    def __init__(self, number_of_genes: int = 11, default: list = OVERFIT_WEIGHTS):
+    def __init__(self, default: list = [], number_of_genes: int = 11, perturb: bool = False):
         """
         Generates one Individual of the Population
         """
+        print(ELITE_GENES)
+        exit(0)
+        if len(default) == 0:
+            default = ELITE_GENES[np.random.randint(len(ELITE_GENES))]
         self.fitness = None
         self.train_error, self.validate_error = None, None
-        self.genes = np.random.normal(loc=0.0, scale=0.0005, size=(number_of_genes)) + default
+        self.genes = default
+        if perturb:
+            self.genes += np.random.normal(loc=0.0, scale=0.0005, size=(number_of_genes))
 
     def birth(self, parent=None, mutation_count:int = 3):
         """
@@ -54,7 +49,7 @@ class Individual:
             self.genes = parent.genes.copy()
         for i in range(mutation_count):
             idx = np.random.randint(len(self.genes))
-            self.genes[idx] += np.random.normal(loc=0.0, scale=0.00001)
+            self.genes[idx] += np.random.normal(loc=0.0, scale=0.0001)
         self.genes = np.clip(self.genes, -10, 10)
         self.update_fitness()
         return self
@@ -89,15 +84,19 @@ class Individual:
         return self.fitness < other.fitness
 
     @staticmethod
-    def generate_population(number_of_individuals: int, number_of_genes: int = 11,
-                            default: np.ndarray = OVERFIT_WEIGHTS) -> list:
+    def generate_population(number_of_individuals: int) -> list:
         """
         Creates a new population of individuals
         :param number_of_individuals: number of different individuals in the populus
-        :param number_of_genes: number of real values genes the individual should have
         :returns: list of the individuals, each is a list of genes
         """
-        return [Individual(number_of_genes, default).birth() for iter_x in range(number_of_individuals)]
+        with open('answer.txt', 'r') as f:
+            for st in f.readlines():
+                data = st.split(']')[0].split('[')[1].strip().split(',')
+                data = list(map(lambda x: float(x.strip()), data))
+                ELITE_GENES.append(data)
+        
+        return [Individual().birth() for iter_x in range(number_of_individuals)]
 
     @staticmethod
     def selection(generation: list, population_size: int = POPULATION_SIZE) -> list:

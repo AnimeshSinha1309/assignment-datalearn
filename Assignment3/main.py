@@ -11,35 +11,24 @@ import datagen
 
 SECRET_KEY = 'EdQPhzkQ1CnpQ9jxCY4AH8eATTHeZm4IwEs2P1jE2xT3p8sCeE'
 
-LOG_FILE = 'results_2.txt'  # File that keep populations and fitness
-ITERATIONS = 20
-POPULATION_SIZE = 20
+LOG_FILE = 'results_9.txt'  # File that keep populations and fitness
+ITERATIONS = 100
+POPULATION_SIZE = 40
 REAL_DATA = True
 
-OVERFIT_WEIGHTS = np.array([
-    0.0,
-    0.1240317450077846,
-    -6.211941063144333,
-    0.04933903144709126,
-    0.03810848157715883,
-    8.132366097133624e-05,
-    -6.018769160916912e-05,
-    -1.251585565299179e-07,
-    3.484096383229681e-08,
-    4.1614924993407104e-11,
-    -6.732420176902565e-12
-])
-
+ELITE_GENES = []
 
 class Individual:
     """
     A single individual of the Genetic Ensemble
     """
 
-    def __init__(self, number_of_genes: int = 11, default: list = OVERFIT_WEIGHTS):
+    def __init__(self, default: list = [], number_of_genes: int = 11):
         """
         Generates one Individual of the Population
         """
+        if len(default) != number_of_genes:
+            default = ELITE_GENES[np.random.randint(len(ELITE_GENES))]
         self.fitness = 0.0
         self.genes = np.multiply(
             np.random.normal(loc=1.0, scale=0.0001, size=(number_of_genes)), 
@@ -54,8 +43,8 @@ class Individual:
         if parent1 is not None and parent2 is not None:
             for i in range(len(self.genes)):
                 self.genes[i] = np.random.choice(
-                    [parent2.genes[i], parent1.genes[i], parent1.genes[i] + parent2.genes[i]],
-                    p = [0.45, 0.45, 0.10]
+                    [parent2.genes[i], parent1.genes[i]],
+                    p = [0.5, 0.5]
                 )
         self.mutation()
         self.genes = np.clip(self.genes, -10, 10)
@@ -63,7 +52,7 @@ class Individual:
         return self
 
     def update_fitness(self, real_data: bool = False,
-                fn=lambda train, val: -(train + val + 10 * abs(val - train))) -> float:
+                fn=lambda train, val: -val) -> float:
         """
         Computes the fitness of each individual by making a call to the fitness function
         :param individual: a list containing the genome of the individual
@@ -79,7 +68,7 @@ class Individual:
         self.fitness = fn(train=train_error, val=validation_error)
         return self.fitness
 
-    def mutation(self, muatation_probability: float = 0.1, mutation_amount: float = 0.001):
+    def mutation(self, muatation_probability: float = 0.9, mutation_amount: float = 1.0):
         """
         Randomly mutates the genome.
         :param individual: individual to be mutated (or not)
@@ -88,7 +77,7 @@ class Individual:
         :returns: the new mutated genome of the individual
         """
         if np.random.random() < muatation_probability:
-            self.genes = np.multiply(self.genes, np.random.normal(loc = 1.0, scale = mutation_amount))
+            self.genes[np.random.randint(len(self.genes))] = np.random.random() * mutation_amount
 
     def __lt__(self, other):
         """
@@ -100,15 +89,20 @@ class Individual:
         return self.fitness < other.fitness
 
     @staticmethod
-    def generate_population(number_of_individuals: int, number_of_genes: int = 11,
-                            default: np.ndarray = OVERFIT_WEIGHTS) -> list:
+    def generate_population(number_of_individuals: int, number_of_genes: int = 11) -> list:
         """
         Creates a new population of individuals
         :param number_of_individuals: number of different individuals in the populus
-        :param number_of_genes: number of real values genes the individual should have
         :returns: list of the individuals, each is a list of genes
         """
-        return [Individual(number_of_genes, default).birth() for iter_x in range(number_of_individuals)]
+        with open('answer.txt', 'r') as f:
+            for st in f.readlines():
+                data = st.split(']')[0].split('[')[1].strip().split(',')
+                data = list(map(lambda x: float(x.strip()), data))
+                ELITE_GENES.append(data)
+        
+        return [Individual().birth() 
+                for iter_x in range(number_of_individuals)]
 
     @staticmethod
     def selection(generation: list, population_size: int = POPULATION_SIZE) -> list:
@@ -117,7 +111,8 @@ class Individual:
         :param generation: the current populus
         :returns: dict, array of genomes of all selected, all fitness
         """
-        generation = sorted(generation, reverse=True)
+        generation = sorted(generation, key = lambda x: x.fitness, reverse=True)
+        assert generation[0].fitness >= generation[1].fitness >= generation[-1].fitness
         assert all([type(person) is Individual for person in generation])
         return generation[:POPULATION_SIZE]
 
