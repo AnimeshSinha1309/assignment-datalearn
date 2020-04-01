@@ -11,9 +11,9 @@ import datagen
 
 SECRET_KEY = 'EdQPhzkQ1CnpQ9jxCY4AH8eATTHeZm4IwEs2P1jE2xT3p8sCeE'
 
-LOG_FILE = 'results_9.txt'  # File that keep populations and fitness
+LOG_FILE = 'results_10.txt'  # File that keep populations and fitness
 ITERATIONS = 100
-POPULATION_SIZE = 40
+POPULATION_SIZE = 20
 REAL_DATA = True
 
 ELITE_GENES = []
@@ -41,11 +41,9 @@ class Individual:
         :param parents2: the second parent in the couple mating
         """
         if parent1 is not None and parent2 is not None:
+            mutation_position = np.random.randint(len(self.genes) + 1)
             for i in range(len(self.genes)):
-                self.genes[i] = np.random.choice(
-                    [parent2.genes[i], parent1.genes[i]],
-                    p = [0.5, 0.5]
-                )
+                self.genes[i] = parent1.genes[i] if i < mutation_position else parent2.genes[i]
         self.mutation()
         self.genes = np.clip(self.genes, -10, 10)
         self.update_fitness()
@@ -100,8 +98,7 @@ class Individual:
                 data = st.split(']')[0].split('[')[1].strip().split(',')
                 data = list(map(lambda x: float(x.strip()), data))
                 ELITE_GENES.append(data)
-        
-        return [Individual().birth() 
+        return [Individual().birth()
                 for iter_x in range(number_of_individuals)]
 
     @staticmethod
@@ -136,7 +133,7 @@ class Individual:
         return couples
 
     @staticmethod
-    def mating(parents: list, n_offsprings: int = 3) -> list:
+    def mating(parents: list, n_offsprings: int = 2) -> list:
         """
         Create the new genome for n children of the parents.
         :param (parents1): the first parent in the couple mating
