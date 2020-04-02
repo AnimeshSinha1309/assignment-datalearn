@@ -11,9 +11,9 @@ import datagen
 
 SECRET_KEY = 'EdQPhzkQ1CnpQ9jxCY4AH8eATTHeZm4IwEs2P1jE2xT3p8sCeE'
 
-LOG_FILE = 'results_10.txt'  # File that keep populations and fitness
-ITERATIONS = 100
-POPULATION_SIZE = 20
+LOG_FILE = 'results_12.txt'  # File that keep populations and fitness
+ITERATIONS = 60
+POPULATION_SIZE = 16
 REAL_DATA = True
 
 ELITE_GENES = []
@@ -33,6 +33,12 @@ class Individual:
         self.genes = np.multiply(
             np.random.normal(loc=1.0, scale=0.0001, size=(number_of_genes)), 
             default)
+        self.train_error, self.validation_error = 1e100, 1e100
+
+    def __str__(self):
+        return "Vector: " + str(list(self.genes)) + \
+            " Errors: " + str((self.train_error, self.validation_error)) + \
+            " Fitness" + str(self.fitness)
 
     def birth(self, parent1 = None, parent2 = None):
         """
@@ -44,13 +50,17 @@ class Individual:
             mutation_position = np.random.randint(len(self.genes) + 1)
             for i in range(len(self.genes)):
                 self.genes[i] = parent1.genes[i] if i < mutation_position else parent2.genes[i]
+        with open('trace.txt', 'a') as TRACE_FILE_OBJ:
+            TRACE_FILE_OBJ.write('\tPre-Mutation Genome: ' + str(self) + '\n')
         self.mutation()
         self.genes = np.clip(self.genes, -10, 10)
         self.update_fitness()
+        with open('trace.txt', 'a') as TRACE_FILE_OBJ:
+            TRACE_FILE_OBJ.write('\tPost-Mutation Genome: ' + str(self) + '\n')
         return self
 
     def update_fitness(self, real_data: bool = False,
-                fn=lambda train, val: -val) -> float:
+                fn=lambda train, val: -(val + 4 * abs(train - val))) -> float:
         """
         Computes the fitness of each individual by making a call to the fitness function
         :param individual: a list containing the genome of the individual
@@ -62,6 +72,7 @@ class Individual:
             train_error, validation_error = client.get_errors(SECRET_KEY, list(self.genes))
         else:
             train_error, validation_error = datagen.get_errors(SECRET_KEY, self.genes)
+        self.train_error, self.validation_error = train_error, validation_error
         print(self.genes, train_error, validation_error)
         self.fitness = fn(train=train_error, val=validation_error)
         return self.fitness
@@ -75,7 +86,7 @@ class Individual:
         :returns: the new mutated genome of the individual
         """
         if np.random.random() < muatation_probability:
-            self.genes[np.random.randint(len(self.genes))] = np.random.random() * mutation_amount
+            self.genes[np.random.randint(len(self.genes))] += np.random.random() * mutation_amount
 
     def __lt__(self, other):
         """
@@ -170,6 +181,9 @@ if __name__ == "__main__":
         if CHOICE not in ('y', 'Y'):
             exit(0)
 
+    with open('trace.txt', 'a') as TRACE_FILE_OBJ:
+        TRACE_FILE_OBJ.write('Initializing and Mutation population 0:\n')
+
     generation = Individual.generate_population(POPULATION_SIZE)
     assert all([type(person) is Individual for person in generation])
     
@@ -178,10 +192,27 @@ if __name__ == "__main__":
         LOG_FILE_OBJ.write(str(Individual.stats_fitness(generation))+'\n')
 
     for i in range(ITERATIONS):
+        with open('trace.txt', 'a') as TRACE_FILE_OBJ:
+            TRACE_FILE_OBJ.write('\n\n\nStarting Generation {0}:\n'.format(i))
+            TRACE_FILE_OBJ.write('\nPeople in genration {0}:\n'.format(i))
+            for person in generation:
+                TRACE_FILE_OBJ.write('\t' + str(person) + '\n')
+
         print('=========================================')
         couples = Individual.pairing(generation)
+
+        with open('trace.txt', 'a') as TRACE_FILE_OBJ:
+            TRACE_FILE_OBJ.write('\nPairing of Individuals:\n')
+            for couple in couples:
+                TRACE_FILE_OBJ.write('\t' + str(couple[0]) + ' with ' + str(couple[1]) + '\n')
+
+        with open('trace.txt', 'a') as TRACE_FILE_OBJ:
+            TRACE_FILE_OBJ.write('\nCreating Children:\n')
+
         children = Individual.mating(couples)
+
         generation = Individual.selection(generation + children)
+
         assert all([type(person) is Individual for person in generation])
 
         # Keep a log of things
